@@ -12,11 +12,17 @@ import rpy2.robjects as ro
 from rpy2.robjects.packages import importr
 gr = importr('grDevices')
 
+# Paths
+homedir = '/Users/jmcarp/Dropbox/projects/fmri-report'
+datadir = '%s/data' % (homedir)
+scriptdir = '%s/scripts' % (homedir)
+figsdir = '%s/figs' % (homedir)
+
 # Import R libraries
 ro.r('library(RColorBrewer)')
 ro.r('library(plotrix)')
 ro.r('library(pwr)')
-ro.r('source("modbar.R")')
+ro.r('source("%s/modbar.R")' % (scriptdir))
 
 # 
 esizes = [0.8, 1.2, 1.6]
@@ -32,11 +38,6 @@ cex_main = 2.25
 mar = [5.6, 5.1, 4.1, 2.1]
 mgpx = [4.25, 1, 0]
 mgpy = [3, 1, 0]
-
-# Paths
-homedir = '/Users/jmcarp/Dropbox/projects/fmri-report'
-datadir = '%s/data' % (homedir)
-figsdir = '%s/figs' % (homedir)
 
 tsvfile = '%s/fmri-report.tsv' % (datadir)
 
@@ -126,6 +127,14 @@ grpname = {
   'displ' : 'Display'
 }
 
+def ezread():
+  
+  rep = readrep(tsvfile)
+  rep = augrep(rep)
+  rep = mergerep(rep)
+
+  return rep
+
 def flexplots():
   
   rep = readrep(tsvfile)
@@ -134,7 +143,7 @@ def flexplots():
 
   plotsmooth(rep, '%s/flex-smooth.pdf' % (figsdir))
   plothpf(rep, cutoff=500, binsize=20, outname='%s/flex-hpf.pdf' % (figsdir))
-  plotext(rep, outname='%s/flex-mccorrect-ext.pdf' % (figsdir))
+  plotext(rep, exttype='vol', outname='%s/flex-mccorrect-ext.pdf' % (figsdir))
 
   plotopts(rep, 'norm', 'proc-norm-tgtvol', minct=2, 
     outname='%s/flex-norm-tgtvol.pdf' % (figsdir))
@@ -631,7 +640,8 @@ def procsteps(rep):
         increc = [r for r in rep if incl[step][rule](r)]
         stepct[step][var][rule] = {}
         
-        vals = [r[var].lower().split('; ') for r in increc]
+        vals = [str(r[var]).lower().split('; ') for r in increc]
+        #vals = [r[var].lower().split('; ') for r in increc]
         fvals = reduce(operator.add, vals)
         uvals = list(set(fvals))
         
@@ -692,22 +702,44 @@ def getmcc(rep):
   
   print len(truemc), len(falsemc), len(missmc)
 
-def plotext(rep, outname=None):
+def plotext(rep, exttype='vol', outname=None):
   
-  ext = [r['mod-gmod-mccorrect-ext'] for r in rep]
-  ext = [x for x in ext if x not in ['missing', 'n/a']
-    and x.endswith('voxels')]
-  ext = [int(re.sub('\s+voxels', '', x)) for x in ext]
-
-  print median(ext)
-  print scipy.stats.stats.mode(ext)
+  if exttype == 'vox':
+    ext = [r['mod-gmod-mccorrect-ext'] for r in rep]
+    ext = [x for x in ext if x not in ['missing', 'n/a']
+      and x.endswith('voxels')]
+    ext = [int(re.sub('\s+voxels', '', x)) for x in ext]
+    cutoff = 250
+    skip = 2
+    xlab='Cluster extent threshold (# voxels)',
+  elif exttype == 'vol':
+    ext = [r['misc-extvol'] for r in rep]
+    ext = [x for x in ext if x not in ['missing', 'n/a']]
+    ext = [float(x) for x in ext]
+    cutoff = 3000
+    skip = 2
+    xlab=ro.r('expression(paste("Cluster extent threshold (", mm^3, ")"))')
   
+  print sorted(ext)
+  print 'Median cluster extent: %f' % (median(ext))
+  print 'Modal cluster extent: %f' % (scipy.stats.stats.mode(ext)[0][0])
+  
+  #histgap(
+  #  {'ext' : ext},
+  #  cutoff=cutoff,
+  #  xlab='Cluster extent threshold (# voxels)',
+  #  ylab='Count',
+  #  skip=skip,
+  #  main='expression(bold("Inference: Extent"))',
+  #  outname=outname
+  #)
   histgap(
     {'ext' : ext},
-    cutoff=250,
-    xlab='Cluster extent threshold (# voxels)',
+    cutoff=cutoff,
+    nbins=8,
+    xlab=xlab,
     ylab='Count',
-    skip=2,
+    skip=skip,
     main='expression(bold("Inference: Extent"))',
     outname=outname
   )
@@ -749,7 +781,10 @@ def procsoft(rep):
   return softcom
 
 def getpwr(rep, esize, sig):
-  
+    
+  alt = 'greater'
+  #alt = 'two.sided'
+
   for r in rep:
     
     if 'subjinfo' not in r:
@@ -761,8 +796,8 @@ def getpwr(rep, esize, sig):
       if n == 1:
         continue
       
-      pwrtmp = ro.r('pwr.t.test(n=%d, d=%f, sig.level=%f, alternative=\'greater\')' % 
-        (n, esize, sig)
+      pwrtmp = ro.r('pwr.t.test(n=%d, d=%f, sig.level=%f, alternative="%s")' % 
+        (n, esize, sig, alt)
       )
       r['subjinfo']['pwr'] = pwrtmp[3][0]
 
@@ -771,8 +806,8 @@ def getpwr(rep, esize, sig):
       ns = [r['subjinfo']['grp'][g] for g in r['subjinfo']['grp']]
       if 1 in ns:
         continue
-      pwrtmp = ro.r('pwr.t2n.test(n1=%d, n2=%d, d=%f, sig.level=%f)' %
-        (ns[0], ns[1], esize, sig)
+      pwrtmp = ro.r('pwr.t2n.test(n1=%d, n2=%d, d=%f, sig.level=%f, alternative="%s")' %
+        (ns[0], ns[1], esize, sig, alt)
       )
       r['subjinfo']['pwr'] = pwrtmp[4][0]
 
@@ -804,8 +839,8 @@ def getcumpwr(rep, esize, sig):
   nrep1 = len([r for r in pwr1 if r >= 80])
   nrep2 = len([r for r in pwr2 if r >= 80])
   print 'Effect size %f, threshold %f' % (esize, sig)
-  print 'One-group: %f' % (nrep1 / float(len(pwr1)))
-  print 'Two-group: %f' % (nrep2 / float(len(pwr2)))
+  print 'One-group: %f' % (nrep1 / float(len(pwr1))), mean(pwr1)
+  print 'Two-group: %f' % (nrep2 / float(len(pwr2))), mean(pwr2)
 
   return pwrbins, cumpwr1, cumpwr2
 
@@ -1125,6 +1160,8 @@ def histgap(histdat, cutoff, nbins=10, binsize=None, maxbin=None, breaks=None, m
       lab[labidx] = '%d' % (lab[labidx])
     else:
       lab[labidx] = '%0.1f' % (lab[labidx] * 100)
+  print 'lab', lab
+  print 'at', at
 
   # Set label offsets
   ro.r('par(mgp=c(%f, %f, %f))' % (mgpx[0], mgpx[1], mgpx[2]))
@@ -1421,7 +1458,9 @@ def mergerep(rep):
   
   for r in rep:
     for fld in r:
-      val = r[fld].lower()
+      val = r[fld]
+      if type(val) == str:
+        val = r[fld].lower()
       if fld in merge and val in merge[fld]:
         r[fld] = merge[fld][val]
 
@@ -1472,6 +1511,9 @@ def augrep(rep):
       softcom.append(com)
     softstr = '; '.join(softcom)
     rep[ridx]['misc-softcom'] = softstr
+    
+    # Get extent threshold volume
+    rep[ridx]['misc-extvol'] = getextvol(rep[ridx])
 
     # 
     if rep[ridx]['mod-smod-filter-bool'] != 'TRUE':
@@ -1484,6 +1526,44 @@ def augrep(rep):
     del rep[ridx]['mod-smod-type']
 
   return rep
+
+def getextvol(rep):
+  
+  ext = rep['mod-gmod-mccorrect-ext']
+  
+  if ext == 'n/a':
+    return 'n/a'
+
+  if ext in ['missing', 'misisng']:
+    return 'missing'
+
+  ccmatch = re.search('(\d+)\s(mm3|ul)', ext, re.I)
+  if ccmatch:
+    try:
+      return int(ccmatch.groups()[0])
+    except:
+      pass
+  
+  evmatch = re.search('(\d+)\svoxels$', ext)
+  if not evmatch:
+    return 'missing'
+  try:
+    nvox = int(evmatch.groups()[0])
+  except:
+    return 'missing'
+
+  finalres = rep['misc-finalres']
+  if not finalres or finalres in ['missing', 'misisng']:
+    return 'missing'
+  resdims = finalres.split('x')
+  if len(resdims) != 3:
+    return 'missing'
+  try:
+    voxsize = prod([float(dim) for dim in resdims])
+  except:
+    return 'missing'
+
+  return nvox * voxsize
 
 def readrep(repfile):
   
