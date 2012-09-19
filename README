@@ -1,1 +1,4 @@
 <fmri-report> contains tools for analysis and plotting of methods reported in fMRI studies.
+
+These tools were used to run analyses and create figures for the following report:
+Carp, J. (2012). The secret lives of experiments: The secret lives of experiments: Methods reporting in the fMRI literature. NeuroImage, 63(1), 289-300. http://dx.doi.org/10.1016/j.neuroimage.2012.07.004
