@@ -1,4 +1,3 @@
-
 # Import Python libraries
 import re
 import warnings
@@ -43,20 +42,20 @@ tsvfile = '%s/fmri-report.tsv' % (datadir)
 
 mandsteps = [ 
   'edes', 'subjs', 'scan', 'func', 
-  'smod', 'gmod', 'misc'
+  'smod', 'gmod', 'misc',
 ]
 boolsteps = [ 
   'eventopt', 'power', 'anat', 'coplanar', 
   'slicetime', 'mc', 'coreg', 'skullstrip', 
   'segment', 'norm', 'smooth', 'detrend', 
   'unwarp', 'scale', 'filter', 'motreg', 
-  'acf', 'mccorrect', 'roi', 'fig', 'tab'
+  'acf', 'mccorrect', 'roi', 'fig', 'tab',
 ]
 allsteps = mandsteps + boolsteps
 
 legpos = {
-  'mod' : 'topleft',
-  'proc' : 'topleft',
+  'mod' :   'topleft',
+  'proc' :  'topleft',
   'displ' : 'topleft'
 }
 
@@ -94,36 +93,36 @@ merge = {
 }
 
 stepgrp = {
-  'des' : [ 'edes', 'subjs' ],
-  'acq' : [ 'func', 'anat', 'coplanar' ],
-  'proc' : [ 'slicetime', 'mc', 'coreg', 'norm', 'smooth' ],
-  'mod' : [ 'smod', 'gmod', 'roi' ],
+  'des' :   [ 'edes', 'subjs' ],
+  'acq' :   [ 'func', 'anat', 'coplanar' ],
+  'proc' :  [ 'slicetime', 'mc', 'coreg', 'norm', 'smooth' ],
+  'mod' :   [ 'smod', 'gmod', 'roi' ],
   'displ' : [ 'fig', 'tab' ]
 }
 
 stepname = {
-  'edes' : 'Task design',
-  'subjs' : 'Human subjects',
-  'func' : 'Functional scans',
-  'anat' : 'Anatomical scans',
-  'coplanar' : 'Auxiliary scans',
+  'edes' :      'Task design',
+  'subjs' :     'Human subjects',
+  'func' :      'Functional scans',
+  'anat' :      'Anatomical scans',
+  'coplanar' :  'Auxiliary scans',
   'slicetime' : 'Slice-timing correction',
-  'mc' : 'Motion correction',
-  'coreg' : 'Coregistration',
-  'norm' : 'Spatial normalization',
-  'smooth' : 'Spatial smoothing',
-  'smod' : 'Within-subjects modeling',
-  'gmod' : 'Between-subjects modeling',
-  'roi' : 'Region of interest analysis',
-  'fig' : 'Figures',
-  'tab' : 'Tables'
+  'mc' :        'Motion correction',
+  'coreg' :     'Coregistration',
+  'norm' :      'Spatial normalization',
+  'smooth' :    'Spatial smoothing',
+  'smod' :      'Within-subjects modeling',
+  'gmod' :      'Between-subjects modeling',
+  'roi' :       'Region of interest analysis',
+  'fig' :       'Figures',
+  'tab' :       'Tables'
 }
 
 grpname = {
-  'des' : 'Design',
-  'acq' : 'Acquisition',
-  'proc' : 'Pre-processing',
-  'mod' : 'Modeling',
+  'des' :   'Design',
+  'acq' :   'Acquisition',
+  'proc' :  'Pre-processing',
+  'mod' :   'Modeling',
   'displ' : 'Display'
 }
 
@@ -137,9 +136,7 @@ def ezread():
 
 def flexplots():
   
-  rep = readrep(tsvfile)
-  rep = augrep(rep)
-  rep = mergerep(rep)
+  rep = ezread()
 
   plotsmooth(rep, '%s/flex-smooth.pdf' % (figsdir))
   plothpf(rep, cutoff=500, binsize=20, outname='%s/flex-hpf.pdf' % (figsdir))
@@ -159,8 +156,9 @@ def flexplots():
 
 def makeplots():
   
-  rep = readrep(tsvfile)
-  rep = augrep(rep)
+  rep = ezread()
+  #rep = readrep(tsvfile)
+  #rep = augrep(rep)
 
   boolinfo = procbool(rep)
   stepinfo = procsteps(rep)

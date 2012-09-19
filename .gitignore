@@ -1,4 +1,2 @@
-# Ignore temporary files from vi
-.swp
-# Ignore compiled Python files
-.pyc
+*.swp
+*.pyc
